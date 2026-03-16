@@ -34,17 +34,10 @@ The API uses three auth schemes:
 ```bash
 curl -X POST http://localhost:7777/api/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"username":"admin","password":"admin123"}'
+  -d '{"username":"admin","password":"<your-password>"}'
 ```
 
-## Default Users
-
-| Username | Password | Role | API Key |
-|----------|----------|------|---------|
-| admin | admin123 | admin | vb-key-admin-00001 |
-| john | john123 | user | vb-key-john-00002 |
-| jane | jane123 | user | vb-key-jane-00003 |
-| auditor | audit123 | auditor | vb-key-auditor-00004 |
+Credentials are configured via environment variables. See `.env.example`.
 
 ## Endpoints
 
