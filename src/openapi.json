@@ -1,0 +1,880 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "VulnBank API",
+    "description": "VulnBank — A banking API for demonstration purposes",
+    "version": "1.0.0",
+    "contact": {
+      "name": "VulnBank Support",
+      "email": "support@vulnbank.com"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:7777",
+      "description": "Local development server"
+    }
+  ],
+  "security": [],
+  "paths": {
+    "/api/health": {
+      "get": {
+        "tags": ["System"],
+        "summary": "Health check",
+        "operationId": "healthCheck",
+        "responses": {
+          "200": {
+            "description": "Service is healthy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": { "type": "string", "example": "ok" },
+                    "timestamp": { "type": "string", "format": "date-time" },
+                    "version": { "type": "string", "example": "1.0.0" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "User login",
+        "operationId": "login",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["username", "password"],
+                "properties": {
+                  "username": { "type": "string" },
+                  "password": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "token": { "type": "string" },
+                    "apiKey": { "type": "string" },
+                    "user": {
+                      "type": "object",
+                      "properties": {
+                        "id": { "type": "integer" },
+                        "username": { "type": "string" },
+                        "role": { "type": "string" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid credentials"
+          }
+        }
+      }
+    },
+    "/api/auth/register": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Register new user",
+        "operationId": "register",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["username", "password"],
+                "properties": {
+                  "username": { "type": "string" },
+                  "password": { "type": "string" },
+                  "email": { "type": "string", "format": "email" },
+                  "fullName": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "User registered",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": { "type": "integer" },
+                    "username": { "type": "string" },
+                    "apiKey": { "type": "string" },
+                    "message": { "type": "string" }
+                  }
+                }
+              }
+            }
+          },
+          "409": { "description": "Username already exists" }
+        }
+      }
+    },
+    "/api/accounts": {
+      "get": {
+        "tags": ["Accounts"],
+        "summary": "List all accounts",
+        "operationId": "listAccounts",
+        "responses": {
+          "200": {
+            "description": "List of accounts",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "accounts": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/Account" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Accounts"],
+        "summary": "Create account",
+        "operationId": "createAccount",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "userId": { "type": "integer" },
+                  "type": { "type": "string", "enum": ["checking", "savings"] }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Account created",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Account" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/users": {
+      "get": {
+        "tags": ["Admin"],
+        "summary": "List all users (admin)",
+        "operationId": "adminListUsers",
+        "responses": {
+          "200": {
+            "description": "List of all users with details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "users": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/UserDetail" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/docs": {
+      "get": {
+        "tags": ["System"],
+        "summary": "OpenAPI specification",
+        "operationId": "getDocs",
+        "responses": {
+          "200": {
+            "description": "OpenAPI JSON specification"
+          }
+        }
+      }
+    },
+    "/api/transactions": {
+      "get": {
+        "tags": ["Transactions"],
+        "summary": "List transactions",
+        "operationId": "listTransactions",
+        "security": [{ "apiKeyAuth": [] }],
+        "parameters": [
+          {
+            "name": "ssn",
+            "in": "query",
+            "schema": { "type": "string" },
+            "description": "Filter by SSN"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": { "type": "string", "enum": ["completed", "pending", "failed"] },
+            "description": "Filter by status"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of transactions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "transactions": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/Transaction" }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized" }
+        }
+      },
+      "post": {
+        "tags": ["Transactions"],
+        "summary": "Create transaction",
+        "operationId": "createTransaction",
+        "security": [{ "apiKeyAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["fromAccountId", "toAccountId", "amount"],
+                "properties": {
+                  "fromAccountId": { "type": "integer" },
+                  "toAccountId": { "type": "integer" },
+                  "amount": { "type": "number" },
+                  "description": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Transaction created",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Transaction" }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized" }
+        }
+      }
+    },
+    "/api/transactions/{id}": {
+      "get": {
+        "tags": ["Transactions"],
+        "summary": "Get transaction by ID",
+        "operationId": "getTransaction",
+        "security": [{ "apiKeyAuth": [] }],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Transaction details",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Transaction" }
+              }
+            }
+          },
+          "404": { "description": "Transaction not found" },
+          "401": { "description": "Unauthorized" }
+        }
+      },
+      "delete": {
+        "tags": ["Transactions"],
+        "summary": "Delete transaction",
+        "operationId": "deleteTransaction",
+        "security": [{ "apiKeyAuth": [] }],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer" }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Transaction deleted" },
+          "404": { "description": "Transaction not found" },
+          "401": { "description": "Unauthorized" }
+        }
+      }
+    },
+    "/api/balance": {
+      "get": {
+        "tags": ["Accounts"],
+        "summary": "Get account balance",
+        "operationId": "getBalance",
+        "security": [{ "apiKeyAuth": [] }],
+        "parameters": [
+          {
+            "name": "api_key",
+            "in": "query",
+            "schema": { "type": "string" },
+            "description": "API key (alternative)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Account balance",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "userId": { "type": "integer" },
+                    "accounts": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": { "type": "integer" },
+                          "accountNumber": { "type": "string" },
+                          "balance": { "type": "number" },
+                          "type": { "type": "string" }
+                        }
+                      }
+                    },
+                    "totalBalance": { "type": "number" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized" }
+        }
+      }
+    },
+    "/api/transfer": {
+      "post": {
+        "tags": ["Transactions"],
+        "summary": "Transfer funds",
+        "operationId": "transferFunds",
+        "security": [{ "apiKeyAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["fromAccountId", "toAccountId", "amount"],
+                "properties": {
+                  "fromAccountId": { "type": "integer" },
+                  "toAccountId": { "type": "integer" },
+                  "amount": { "type": "number" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Transfer successful"
+          },
+          "400": { "description": "Insufficient funds" },
+          "401": { "description": "Unauthorized" }
+        }
+      }
+    },
+    "/api/users/me": {
+      "get": {
+        "tags": ["Users"],
+        "summary": "Get current user profile",
+        "operationId": "getCurrentUser",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Current user profile",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/UserProfile" }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized" }
+        }
+      }
+    },
+    "/api/users/{id}": {
+      "put": {
+        "tags": ["Users"],
+        "summary": "Update user",
+        "operationId": "updateUser",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": { "type": "string", "format": "email" },
+                  "fullName": { "type": "string" },
+                  "phone": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "User updated" },
+          "404": { "description": "User not found" },
+          "401": { "description": "Unauthorized" }
+        }
+      },
+      "delete": {
+        "tags": ["Users"],
+        "summary": "Delete user",
+        "operationId": "deleteUser",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer" }
+          }
+        ],
+        "responses": {
+          "200": { "description": "User deleted" },
+          "404": { "description": "User not found" },
+          "401": { "description": "Unauthorized" }
+        }
+      }
+    },
+    "/api/users/{id}/cards": {
+      "get": {
+        "tags": ["Users"],
+        "summary": "Get user credit cards",
+        "operationId": "getUserCards",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User credit cards",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "cards": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/CreditCard" }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized" }
+        }
+      }
+    },
+    "/api/users/search": {
+      "post": {
+        "tags": ["Users"],
+        "summary": "Search users",
+        "operationId": "searchUsers",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["query"],
+                "properties": {
+                  "query": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Search results",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "query": { "type": "string" },
+                    "sql": { "type": "string" },
+                    "results": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": { "type": "integer" },
+                          "username": { "type": "string" },
+                          "email": { "type": "string" },
+                          "fullName": { "type": "string" },
+                          "matchedQuery": { "type": "string" }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized" }
+        }
+      }
+    },
+    "/api/upload/avatar": {
+      "post": {
+        "tags": ["Users"],
+        "summary": "Upload avatar",
+        "operationId": "uploadAvatar",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "avatar": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "File uploaded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": { "type": "string" },
+                    "filename": { "type": "string" },
+                    "path": { "type": "string" },
+                    "size": { "type": "integer" },
+                    "mimetype": { "type": "string" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized" }
+        }
+      }
+    },
+    "/api/users/export": {
+      "get": {
+        "tags": ["Users"],
+        "summary": "Export user data",
+        "operationId": "exportUsers",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "url",
+            "in": "query",
+            "schema": { "type": "string" },
+            "description": "URL to fetch export data from"
+          },
+          {
+            "name": "format",
+            "in": "query",
+            "schema": { "type": "string", "enum": ["json", "csv"] },
+            "description": "Export format"
+          }
+        ],
+        "responses": {
+          "200": { "description": "Exported user data" },
+          "401": { "description": "Unauthorized" }
+        }
+      }
+    },
+    "/api/users/{id}/role": {
+      "put": {
+        "tags": ["Users"],
+        "summary": "Change user role",
+        "operationId": "changeUserRole",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "role": { "type": "string", "enum": ["admin", "user", "auditor"] }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Role updated" },
+          "404": { "description": "User not found" },
+          "401": { "description": "Unauthorized" }
+        }
+      }
+    },
+    "/api/reports/annual": {
+      "get": {
+        "tags": ["Reports"],
+        "summary": "Get annual report",
+        "operationId": "getAnnualReport",
+        "security": [{ "basicAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Annual report",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "report": { "type": "string" },
+                    "totalAccounts": { "type": "integer" },
+                    "totalTransactions": { "type": "integer" },
+                    "totalBalance": { "type": "number" },
+                    "generatedBy": { "type": "string" },
+                    "generatedAt": { "type": "string", "format": "date-time" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized" }
+        }
+      }
+    },
+    "/api/reports/transactions": {
+      "get": {
+        "tags": ["Reports"],
+        "summary": "Transaction report",
+        "operationId": "getTransactionReport",
+        "security": [{ "basicAuth": [] }],
+        "parameters": [
+          {
+            "name": "sid",
+            "in": "query",
+            "schema": { "type": "string" },
+            "description": "Session ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Transaction report"
+          },
+          "401": { "description": "Unauthorized" }
+        }
+      }
+    },
+    "/api/reports/generate": {
+      "post": {
+        "tags": ["Reports"],
+        "summary": "Generate report",
+        "operationId": "generateReport",
+        "security": [{ "basicAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "format": { "type": "string", "enum": ["pdf", "csv", "html"] },
+                  "reportType": { "type": "string", "enum": ["summary", "detailed", "audit"] }
+                }
+              }
+            },
+            "application/xml": {
+              "schema": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Report generated" },
+          "401": { "description": "Unauthorized" }
+        }
+      }
+    },
+    "/api/config": {
+      "get": {
+        "tags": ["System"],
+        "summary": "Get system configuration",
+        "operationId": "getConfig",
+        "security": [{ "basicAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "System configuration",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "server": { "type": "object" },
+                    "database": { "type": "object" },
+                    "version": { "type": "string" },
+                    "framework": { "type": "string" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized" }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "apiKeyAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-API-Key"
+      },
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      },
+      "basicAuth": {
+        "type": "http",
+        "scheme": "basic"
+      }
+    },
+    "schemas": {
+      "Account": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "userId": { "type": "integer" },
+          "accountNumber": { "type": "string" },
+          "balance": { "type": "number" },
+          "type": { "type": "string", "enum": ["checking", "savings"] },
+          "createdAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "Transaction": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "fromAccountId": { "type": "integer" },
+          "toAccountId": { "type": "integer" },
+          "amount": { "type": "number" },
+          "description": { "type": "string" },
+          "status": { "type": "string", "enum": ["completed", "pending", "failed"] },
+          "createdAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "UserDetail": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "username": { "type": "string" },
+          "email": { "type": "string" },
+          "role": { "type": "string" },
+          "fullName": { "type": "string" },
+          "ssn": { "type": "string" },
+          "phone": { "type": "string" },
+          "apiKey": { "type": "string" },
+          "createdAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "UserProfile": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "username": { "type": "string" },
+          "email": { "type": "string" },
+          "role": { "type": "string" },
+          "fullName": { "type": "string" },
+          "phone": { "type": "string" }
+        }
+      },
+      "CreditCard": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "userId": { "type": "integer" },
+          "cardNumber": { "type": "string" },
+          "cvv": { "type": "string" },
+          "expiryDate": { "type": "string" },
+          "cardholderName": { "type": "string" },
+          "billingAddress": { "type": "string" }
+        }
+      }
+    }
+  }
+}
