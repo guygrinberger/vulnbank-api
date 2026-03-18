@@ -524,7 +524,7 @@ app.get('/api/config', basicAuth, (req: Request, res: Response) => {
 // HIDDEN / UNDOCUMENTED ENDPOINT
 // ============================================================
 
-// VULN #28: Undocumented API
+// VULN #28: Undocumented API — debug endpoint leaks credentials
 app.get('/api/debug', (_req: Request, res: Response) => {
   res.json({
     debug: true,
@@ -532,6 +532,55 @@ app.get('/api/debug', (_req: Request, res: Response) => {
     environment: process.env,
     memoryUsage: process.memoryUsage(),
   });
+});
+
+// Shadow API: internal metrics endpoint (not in OpenAPI spec)
+app.get('/api/internal/metrics', (_req: Request, res: Response) => {
+  res.json({
+    uptime: process.uptime(),
+    memory: process.memoryUsage(),
+    activeUsers: users.length,
+    totalAccounts: accounts.length,
+    totalTransactions: transactions.length,
+    totalBalance: accounts.reduce((sum, a) => sum + a.balance, 0),
+  });
+});
+
+// Shadow API: password reset — no auth, no rate limit (not in OpenAPI spec)
+app.post('/api/auth/reset-password', (req: Request, res: Response) => {
+  const { username, newPassword } = req.body;
+  const user = users.find((u) => u.username === username);
+  if (!user) {
+    res.status(404).json({ error: 'User not found' });
+    return;
+  }
+  user.password = newPassword;
+  res.json({ message: 'Password reset successful', username: user.username });
+});
+
+// Shadow API: bulk export all transactions as CSV (not in OpenAPI spec)
+app.get('/api/admin/export-transactions', (_req: Request, res: Response) => {
+  const csv = 'id,from,to,amount,status,date\n' +
+    transactions.map((t) =>
+      `${t.id},${t.fromAccountId},${t.toAccountId},${t.amount},${t.status},${t.createdAt}`
+    ).join('\n');
+  res.setHeader('Content-Type', 'text/csv');
+  res.send(csv);
+});
+
+// Shadow API: impersonate user — admin backdoor (not in OpenAPI spec)
+app.post('/api/admin/impersonate', (req: Request, res: Response) => {
+  const { userId } = req.body;
+  const user = users.find((u) => u.id === userId);
+  if (!user) {
+    res.status(404).json({ error: 'User not found' });
+    return;
+  }
+  const token = jwt.sign(
+    { userId: user.id, username: user.username, role: user.role },
+    JWT_SECRET,
+  );
+  res.json({ token, user: { id: user.id, username: user.username, role: user.role } });
 });
 
 // ============================================================
