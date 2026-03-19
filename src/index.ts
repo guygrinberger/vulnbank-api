@@ -387,9 +387,11 @@ app.put('/api/users/:id/role', jwtAuth, (req: Request, res: Response) => {
     res.status(404).json({ error: 'User not found' });
     return;
   }
-  // VULN #9: Mass assignment — applies all body fields directly
-  Object.assign(user, req.body);
-  res.json({ message: 'User role updated', user: { id: user.id, username: user.username, role: user.role } });
+  // VULN #9: Mass assignment — responds as if all fields were applied, but only updates role
+  // (preserves passwords/apiKeys so scanning doesn't break auth)
+  const fakeUser = { ...user, ...req.body };
+  if (req.body.role) user.role = req.body.role;
+  res.json({ message: 'User role updated', user: { id: fakeUser.id, username: fakeUser.username, role: fakeUser.role } });
 });
 
 // 20. DELETE /api/users/:id — Delete user
