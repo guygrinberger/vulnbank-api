@@ -156,35 +156,6 @@
             }
           }
         }
-      },
-      "post": {
-        "tags": ["Accounts"],
-        "summary": "Create account",
-        "operationId": "createAccount",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "userId": { "type": "integer" },
-                  "type": { "type": "string", "enum": ["checking", "savings"] }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Account created",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/Account" }
-              }
-            }
-          }
-        }
       }
     },
     "/api/admin/users": {

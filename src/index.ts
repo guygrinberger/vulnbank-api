@@ -1,10 +1,11 @@
-import 'dotenv/config';
+import dotenv from 'dotenv';
+import path from 'path';
+dotenv.config({ path: path.resolve(__dirname, '..', '.env') });
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import jwt from 'jsonwebtoken';
 import multer from 'multer';
 import { parseString } from 'xml2js';
-import path from 'path';
 import fs from 'fs';
 import { exec } from 'child_process';
 import http from 'http';
@@ -109,20 +110,6 @@ app.get('/api/accounts', (_req: Request, res: Response) => {
   res.json({ accounts });
 });
 
-// VULN #32: Anonymous resource modification
-app.post('/api/accounts', (req: Request, res: Response) => {
-  const { userId, type } = req.body;
-  const newAccount = {
-    id: accounts.length + 1,
-    userId: userId || 1,
-    accountNumber: `${Date.now()}`,
-    balance: 0,
-    type: type || 'checking',
-    createdAt: new Date().toISOString(),
-  };
-  accounts.push(newAccount);
-  res.status(201).json(newAccount);
-});
 
 // 5. GET /api/admin/users — Admin endpoint with no auth
 // VULN #2: Admin API unauthenticated
@@ -205,13 +192,13 @@ app.get('/api/transactions/:id', apiKeyAuth, (req: Request, res: Response) => {
 
 // 10. DELETE /api/transactions/:id — Delete transaction
 app.delete('/api/transactions/:id', apiKeyAuth, (req: Request, res: Response) => {
-  const idx = transactions.findIndex((t) => t.id === parseInt(req.params.id));
-  if (idx === -1) {
+  const tx = transactions.find((t) => t.id === parseInt(req.params.id));
+  if (!tx) {
     res.status(404).json({ error: 'Transaction not found' });
     return;
   }
-  const deleted = transactions.splice(idx, 1)[0];
-  res.json({ message: 'Transaction deleted', transaction: deleted });
+  // Return success but don't actually delete (preserve data for scanning)
+  res.json({ message: 'Transaction deleted', transaction: tx });
 });
 
 // 11. GET /api/balance — Get account balance
@@ -407,13 +394,13 @@ app.put('/api/users/:id/role', jwtAuth, (req: Request, res: Response) => {
 
 // 20. DELETE /api/users/:id — Delete user
 app.delete('/api/users/:id', jwtAuth, (req: Request, res: Response) => {
-  const idx = users.findIndex((u) => u.id === parseInt(req.params.id));
-  if (idx === -1) {
+  const user = users.find((u) => u.id === parseInt(req.params.id));
+  if (!user) {
     res.status(404).json({ error: 'User not found' });
     return;
   }
-  const deleted = users.splice(idx, 1)[0];
-  res.json({ message: 'User deleted', userId: deleted.id });
+  // Return success but don't actually delete (preserve data for scanning)
+  res.json({ message: 'User deleted', userId: user.id });
 });
 
 // ============================================================
@@ -535,54 +522,6 @@ app.get('/api/debug', (_req: Request, res: Response) => {
   });
 });
 
-// Shadow API: internal metrics endpoint (not in OpenAPI spec)
-app.get('/api/internal/metrics', (_req: Request, res: Response) => {
-  res.json({
-    uptime: process.uptime(),
-    memory: process.memoryUsage(),
-    activeUsers: users.length,
-    totalAccounts: accounts.length,
-    totalTransactions: transactions.length,
-    totalBalance: accounts.reduce((sum, a) => sum + a.balance, 0),
-  });
-});
-
-// Shadow API: password reset — no auth, no rate limit (not in OpenAPI spec)
-app.post('/api/auth/reset-password', (req: Request, res: Response) => {
-  const { username, newPassword } = req.body;
-  const user = users.find((u) => u.username === username);
-  if (!user) {
-    res.status(404).json({ error: 'User not found' });
-    return;
-  }
-  user.password = newPassword;
-  res.json({ message: 'Password reset successful', username: user.username });
-});
-
-// Shadow API: bulk export all transactions as CSV (not in OpenAPI spec)
-app.get('/api/admin/export-transactions', (_req: Request, res: Response) => {
-  const csv = 'id,from,to,amount,status,date\n' +
-    transactions.map((t) =>
-      `${t.id},${t.fromAccountId},${t.toAccountId},${t.amount},${t.status},${t.createdAt}`
-    ).join('\n');
-  res.setHeader('Content-Type', 'text/csv');
-  res.send(csv);
-});
-
-// Shadow API: impersonate user — admin backdoor (not in OpenAPI spec)
-app.post('/api/admin/impersonate', (req: Request, res: Response) => {
-  const { userId } = req.body;
-  const user = users.find((u) => u.id === userId);
-  if (!user) {
-    res.status(404).json({ error: 'User not found' });
-    return;
-  }
-  const token = jwt.sign(
-    { userId: user.id, username: user.username, role: user.role },
-    JWT_SECRET,
-  );
-  res.json({ token, user: { id: user.id, username: user.username, role: user.role } });
-});
 
 // ============================================================
 // ERROR HANDLER
