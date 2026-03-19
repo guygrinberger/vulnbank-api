@@ -90,49 +90,6 @@
         }
       }
     },
-    "/api/auth/register": {
-      "post": {
-        "tags": ["Authentication"],
-        "summary": "Register new user",
-        "operationId": "register",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": ["username", "password"],
-                "properties": {
-                  "username": { "type": "string" },
-                  "password": { "type": "string" },
-                  "email": { "type": "string", "format": "email" },
-                  "fullName": { "type": "string" }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "User registered",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "id": { "type": "integer" },
-                    "username": { "type": "string" },
-                    "apiKey": { "type": "string" },
-                    "message": { "type": "string" }
-                  }
-                }
-              }
-            }
-          },
-          "409": { "description": "Username already exists" }
-        }
-      }
-    },
     "/api/accounts": {
       "get": {
         "tags": ["Accounts"],
@@ -155,6 +112,34 @@
               }
             }
           }
+        }
+      }
+    },
+    "/api/accounts/{id}": {
+      "get": {
+        "tags": ["Accounts"],
+        "summary": "Get account by ID",
+        "operationId": "getAccount",
+        "security": [{ "apiKeyAuth": [] }],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Account details",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Account" }
+              }
+            }
+          },
+          "404": { "description": "Account not found" },
+          "401": { "description": "Unauthorized" }
         }
       }
     },

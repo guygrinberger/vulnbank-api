@@ -75,34 +75,6 @@ app.post('/api/auth/login', (req: Request, res: Response) => {
   });
 });
 
-// 3. POST /api/auth/register — Register
-// VULN #16: No password strength validation
-app.post('/api/auth/register', (req: Request, res: Response) => {
-  const { username, password, email, fullName } = req.body;
-  if (!username || !password) {
-    res.status(400).json({ error: 'Username and password required' });
-    return;
-  }
-  if (users.find((u) => u.username === username)) {
-    res.status(409).json({ error: 'Username already exists' });
-    return;
-  }
-  const newUser = addUser({
-    username,
-    password,
-    email: email || `${username}@vulnbank.com`,
-    role: 'user',
-    fullName: fullName || username,
-    ssn: '000-00-0000',
-    phone: '555-0000',
-  });
-  res.status(201).json({
-    id: newUser.id,
-    username: newUser.username,
-    apiKey: newUser.apiKey,
-    message: 'User registered successfully',
-  });
-});
 
 // 4. GET /api/accounts — List all accounts
 // VULN #1: Missing auth — anonymous access to accounts
@@ -110,6 +82,16 @@ app.get('/api/accounts', (_req: Request, res: Response) => {
   res.json({ accounts });
 });
 
+
+// VULN: BOLA — any authenticated user can access any account by ID (no ownership check)
+app.get('/api/accounts/:id', apiKeyAuth, (req: Request, res: Response) => {
+  const account = accounts.find((a) => a.id === parseInt(req.params.id));
+  if (!account) {
+    res.status(404).json({ error: 'Account not found' });
+    return;
+  }
+  res.json(account);
+});
 
 // 5. GET /api/admin/users — Admin endpoint with no auth
 // VULN #2: Admin API unauthenticated
